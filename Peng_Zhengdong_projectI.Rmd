@@ -1,8 +1,7 @@
 ---
-title: |
-    | BUSN 5000 Part I
-    | Project
-subtitle: Getting started
+title:
+    | Visualization Project
+subtitle: Census Bureau
 author: "Peng Zhengdong"
 output:
   html_document: 
