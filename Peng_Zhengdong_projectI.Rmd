@@ -1,0 +1,323 @@
+---
+title: |
+    | BUSN 5000 Part I
+    | Project
+subtitle: Getting started
+author: "Peng Zhengdong"
+output:
+  html_document: 
+    self_contained: yes
+---
+```{r setup, include=FALSE}
+
+# Attach packages
+library(tidyverse)     # To use the tidy packages
+library(ggplot2)       # For plotting and visualizing
+
+# Set global options
+knitr::opts_chunk$set(echo = TRUE, messages = FALSE, eval = TRUE)
+```
+
+```{asis, directions=TRUE}
+
+```
+## Section 1: Missing Data
+
+Suppose we have data on a sample of working people. $W^{*}_{i}$ is the actual wage of person $i$, $W_{i}$ is the wage the person reports in the survey (including the possibility they did not respond) and $R_{i}=1$ if they reported a value for their wage and $R_{i} = 0$ if they did not. Assume $W_{i} = W^{*}_{i}$ if $R_{i}=1$ and $W_{i} = NA$ if $R_{i}=0$.
+
+***
+
+* **Section 1: Question 1** Using the Law of Iterated Expectations, write an equation that expresses $E[W^{*}]$ in terms of $E[W^{*}|R_{i}=1]$, $E[W^{*}|R_{i}=0]$, $Pr(R_{i}=1)$  and $Pr(R_{i}=0)$.
+
+***
+
+**Answer**
+
+$E[W^{*}]$ = $E[W^{*}|R_{i}=1]$*$Pr(R_{i}=1)$ +
+                                 $E[W^{*}|R_{i}=0]$*$Pr(R_{i}=0)$
+                                 
+***
+
+* **Section 1 Question 2** In the equation you just wrote, which of $E[W^{*}|R_{i}=1]$, $E[W^{*}|R_{i}=0]$, $Pr(R_{i}=1)$  and $Pr(R_{i}=0)$ are *observable* and which are *unobservable*?
+
+***
+
+**Answer**
+
+* $E[W^{*}|R_{i}=1]$ is *observable*
+
+* $E[W^{*}|R_{i}=0]$ is *unobservable*
+
+* $Pr(R_{i}=1)$ is *observable*
+
+* $Pr(R_{i}=0)$ is *observable*
+
+***
+
+* **Section 1 Question 3** Under what *one circumstance* is it possible to learn $E[W^{*}]$ from observed data *without making any further assumptions*?
+
+***
+**Answer**
+
+$E[W^{*}]$ = $E[W^{*}|R_{i}=1]$ which can only true if $Pr(R_{i}=1)$ =1 or $Pr(R_{i}=0)$ =0 (means no missing data)
+
+***
+
+* **Section 1 Question 4** Suppose you know that $Pr(R_{i}=1)=0.5$ and $E[W|R_{i}=1] = 20$. If you are willing to assume that $E[W^{*}|R_{i}=0]$ is between 10 and 30, what is the possible range of values for $E[W^{*}]$? Show your work.
+
+***
+**Answer**
+
+$E[W^{*}]$ = $E[W|R_{i}=1]$ x $Pr(R_{i}=1)$ + $E[W|R_{i}=0]$ x $Pr(R_{i}=0)$.
+
+The probability $R_{i}=1$ and $R_{i}=0$ are both 0.5.
+
+So, the $E[W^{*}]$ is maxmium when $E[W^{*}|R_{i}=0]$ = 30, and is mimium when $E[W^{*}|R_{i}=0]$ = 10.
+
+When $E[W^{*}|R_{i}=0]$ = 10, $E[W^{*}]$ = 20x0.5+10x0.5 = 15
+
+When $E[W^{*}|R_{i}=0]$ = 30, $E[W^{*}]$ = 20x0.5+30x0.5 = 25
+
+* The minimum value for $E[W^{*}]$ is 15
+* The maximum value for $E[W^{*}]$ is 25
+
+***
+
+* **Section 1 Question 5** What must you assume for an estimate of $E[W|R_{i}=1]$ to be an unbiased estimate for $E[W^{*}]$?
+
+***
+**Answer**
+
+For $E[W|R_{i}=1]$ to be an unbiased estimate for $E[W^{*}]$, 
+$E[W^{*}|R_{i}=0]$ must equal to $E[W|R_{i}=1]$
+
+***
+
+
+
+## Section 2: The role of non-startups in job growth
+
+Draw on the code from `Census_Blog_Replication.Rmd` to write a reproducible analysis that will generate a plot of the number of new jobs created by firms that *are not* startups (also called *continuing firms*) as a percentage of total employment.
+
+**Answer**
+```{r, eval = TRUE }
+# Make sure to set the above to read eval = TRUE before you try to knit
+ewfile <- "https://www2.census.gov/ces/bds/firm/bds_f_all_release.csv"
+fafile <- "https://www2.census.gov/ces/bds/firm/bds_f_age_release.csv"
+ewdata <- read_csv(ewfile)
+fadata <- read_csv(fafile)
+
+
+total_data <- ewdata %>%
+  select(year2,job_creation, emp) %>%
+  rename(year = year2,
+         jc_total = job_creation,
+         emp_total = emp)
+
+startup_data <- fadata %>%
+  filter(fage4 == "a) 0") %>%                    # only keep rows for startups         #
+  rename(jc_startup = Job_Creation,              # Rename variables 
+        year = year2) %>%
+  select(year,jc_startup)                        # keep only the year and job creation variables
+
+
+analysis_data <- inner_join(total_data, startup_data, by = "year") %>%    
+  mutate(jc_nonstartup = jc_total - jc_startup,
+         jc_share = 100*jc_nonstartup / jc_total,
+         emp_share = 100*jc_nonstartup / emp_total) %>%
+  filter(year > 2003)
+
+
+non_startup_plot <- ggplot(data = analysis_data, aes(x = year, y = jc_share)) +
+  geom_line() +
+  geom_point() +
+  ylab("Percent of Overall Job Creation") +
+  ggtitle("Job Creation from Non-startup Firms as a Percent of Total U.S. Job Creation From 2004 to 2014")
+
+non_startup_plot
+
+```
+
+## Section 3: Updating a reproducible analysis
+
+In Fall 2020, the Census Bureau released a redesigned version of the BDS. Some of the features of the redesign are described [here](https://www2.census.gov/programs-surveys/bds/updates/bds2018-release-note.pdf). We want to redo the analysis from Lawrence's post using the redesigned and updated data.
+
+### Link to the Data
+Here are links to the redesigned economy-wide and firm age data.
+
+```{r filelocs_2019, echo=TRUE, messages=FALSE}
+# URLs to the redesigned data:
+
+## Economy-wide data
+ewfile <- "https://www2.census.gov/programs-surveys/bds/tables/time-series/bds2019.csv"
+
+## Firm-age data
+fafile <- "https://www2.census.gov/programs-surveys/bds/tables/time-series/bds2019_fac.csv"
+
+
+ewdata <- read_csv(ewfile)
+fadata <- read_csv(fafile, na = c("(X)","(S)", "(D)"))
+head(ewdata)
+head(fadata)
+```
+
+Note that the redesign involved a change to some variable names. Note also that the `bds2019_fac.csv` uses the character strings (X), (S), and (D) as *data quality flags* that indicate values that are either missing or have been suppressed. These changes are built into the code chunk
+
+###  Documenting the new data
+
+* **Section 3: Question 1 ** Consult the [codebook for the new BDS](https://www.census.gov/content/dam/Census/programs-surveys/business-dynamics-statistics/codebook-glossary.pdf). Describe what each of the the *data quality flags* means
+
+* **Answer**
+  * (X): A structurally missing flag will appear as (X), when cells are structurally zero or structurally missing. 
+  * (D): A Disclosure suppression will appear as (D) wjem a cell has too few firms.
+  * (S): A Data quality suppression will appear as (s) When a  cell is determined to be unreliable due to its time series characteristics.
+
+###  Updating the Census Blog Post
+
+* Now attempt to reproduce Lawrence's plots using the redesigned BDS data. Specifically, draw on `Census_Blog_Replication.Rmd` to help edit the code chunks below so they will generate Lawrence's plots, but on the updated data.
+
+```{r solution}
+
+# Create a new tibble data frame that keeps only the year, job_creation and 
+# employment (emp) variables from the economy-wide data. 
+total_data <- ewdata %>%
+  select(year,job_creation, emp) %>%
+  rename(year = year,
+         jc_total = job_creation,
+         emp_total = emp)
+
+# Create data frame that keeps only the year, job_creation and employment (emp) 
+# variables on observations for startups.
+startup_data <- fadata %>%
+  filter(fagecoarse == "a) 0") %>%  # only keep rows for startups
+  rename(jc_startup = job_creation,              # Rename variables 
+        year = year) %>%  #format. Details later
+  select(year,jc_startup)   # keep only the year and job creation variables
+
+analysis_data <- inner_join(total_data, startup_data, by = "year") %>%  # join the data by year
+  mutate(emp_share = 100* jc_startup / emp_total , # construct the analysis variables
+         jc_share = 100 *jc_startup / jc_total) 
+
+# Keep only observations between 2004 and 2014
+plot_data <- analysis_data %>%       
+  filter(year >= 2004 & year <= 2014)     
+
+
+emp_share_plot <- ggplot(data = plot_data ,
+                         mapping = aes(x=year,y=emp_share)) +
+  geom_line()+
+  geom_point() +
+  ylab("Percent of Overall Employment") +
+  ylim(0,3.5) +
+  ggtitle("Job Creation from Startups as a Percent of Total U.S. Employment
+          From 2004 to 2014")
+
+emp_share_plot   ## This statement displays the plot object we just created
+
+jc_share_plot <- ggplot(data = plot_data , 
+                        mapping = aes(x=year,y=jc_share)) +
+  geom_line()+
+  geom_point() +
+  ylab("Percent of Gross Job Creation") +
+  ylim(0,20) +
+  ggtitle("Job Creation from Startups as a Percent of Gross U.S. Job Creation From 2004 to 2014")
+
+jc_share_plot  ## This statement displays the plot object we just created
+```
+
+
+* Make a plot of job creation from startups as a percent of gross job creation for **all years** in the redesigned data. Hint: you just need to take the code for `jc_share_plot` and apply it to `analysis_data` instead of `plot_data`. Insert such code into the block below
+
+**Answer**
+
+```{r}
+
+jc_share_plot_allyears <- ggplot(data = analysis_data, 
+                                 mapping = aes(x=year,y=jc_share)) +
+  geom_line()+
+  geom_point() +
+  ylab("Percent of Gross Job Creation") +
+  ggtitle("Job Creation from Startups as a Percent of Gross U.S. Job Creation All Year")+
+  ylim(0,25)
+  
+jc_share_plot_allyears
+
+```
+
+## Section 4: Bayes' Rule
+
+### Spam filter 
+
+SpamAssassin works by having users train their email program to recognize spam. The program studies emails that have been marked as spam by the user.
+
+Suppose that based on the user-provided data, the program finds the following three patterns:
+
+* The word "Free" appears in 30 percent of emails marked as spam
+* The word "Free" appears in 2 percent of emails marked as not spam
+* 70 percent of all messages are marked as spam
+
+
+**Section 4: Question 1**
+
+Assume that the email program uses Bayes' Rule to determine whether a given message is spam.
+What is the probability of being spam that SpamAssassin assigns to an email with the word "Free"
+
+Translation:
+
+* $P(Free \mid Spam)$ = 30%
+
+* $P(Free \mid NotSpam)$ = 2%
+
+* $P(Spam)$ = 70%
+
+* $P(NotSpam)$ = 1- 70% = 30%
+
+* Baye’s theorem: $P(A \mid B)$ = $P(B \mid A)$*$P(A)$ / $P(B)$ 
+
+* $P(Free)$ = ($P(Spam)$$P(Free \mid Spam)$) + 
+              ($P(NotSpam)$*$P(Free \mid NotSpam)$)
+            =70% x 30% + 30% x 2% = 21.6%
+
+Find $P(Spam \mid Free)$ 
+
+* $P(Spam \mid Free)$ = $P(Free \mid Spam)$*$P(Spam)$ / $P(Free)$ = 30% x 70% / 21.6% = 97.22%
+
+**Section 4: Question 2**
+
+Now assume the program also knows that
+
+* The word "Opportunity" appears in 20 percent of emails marked as spam
+* The word "Opportunity" appears in 5 percent of emails not marked as spam
+
+
+Assume that whether the word "Opportunity" appears is independent of whether the
+word "Free" appears. What is the probability of being spam that SpamAssassin
+assigns to an email containing both the word "Free" that does not contain the word "Opportunity"?
+
+[HINT: Build on your answer to the previous question]
+
+Translation:
+
+*$P(Opp \mid Spam)$ = 20%
+
+*$P(Opp \mid NotSpam)$ = 5%
+
+*$P(NotOpp \mid Spam)$ = 1- 20% = 80%
+
+*$P(Opp \mid NotSpam)$ = 1 - 5% = 95%
+
+*$P(Opp)$ = $P(Spam)$x$P(Opp \mid Spam)$ + $P(NotSpam)$x $P(Opp \mid NotSpam)$ = 70%x20% + 30%x5% = 15.5%
+
+* $P(NotOpp)$ = 1-15.5% = 84.5%
+
+Find
+
+*$P(Spam \mid NotOpp, Free)$ = $P(Spam)$ x $P(NotOpp \mid Spam)$ x $P(Free \mid Spam)$ / ($P(NotOpp)$$P(Free)$)
+
+* = 0.7x0.8x0.3 / 0.845x0.216 = 92.04% 
+
+
+
+
+
+
